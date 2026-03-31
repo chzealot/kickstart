@@ -1,0 +1,187 @@
+package integration
+
+import (
+	"os/exec"
+	"strings"
+	"testing"
+)
+
+func buildBinary(t *testing.T) string {
+	t.Helper()
+	binary := t.TempDir() + "/kickstart"
+	cmd := exec.Command("go", "build", "-o", binary, ".")
+	cmd.Dir = "../../"
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("build failed: %v\n%s", err, out)
+	}
+	return binary
+}
+
+func runKickstart(t *testing.T, binary string, args ...string) (string, error) {
+	t.Helper()
+	cmd := exec.Command(binary, args...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+func TestCLI_Help(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "--help")
+	if err != nil {
+		t.Fatalf("--help failed: %v\n%s", err, out)
+	}
+
+	expected := []string{
+		"一键初始化新电脑环境",
+		"run",
+		"dotfiles",
+		"install",
+		"config",
+		"status",
+		"update",
+		"upgrade",
+		"--config",
+		"--dry-run",
+		"--verbose",
+		"--version",
+	}
+	for _, s := range expected {
+		if !strings.Contains(out, s) {
+			t.Errorf("help output missing %q", s)
+		}
+	}
+}
+
+func TestCLI_Version(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "--version")
+	if err != nil {
+		t.Fatalf("--version failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "kickstart version") {
+		t.Errorf("version output = %q, expected to contain 'kickstart version'", out)
+	}
+}
+
+func TestCLI_Run(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "run")
+	if err != nil {
+		t.Fatalf("run failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "初始化完成") {
+		t.Errorf("run output missing '初始化完成', got %q", out)
+	}
+}
+
+func TestCLI_DefaultCommand(t *testing.T) {
+	bin := buildBinary(t)
+	// Running without subcommand should behave like "run"
+	out, err := runKickstart(t, bin)
+	if err != nil {
+		t.Fatalf("default command failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "初始化完成") {
+		t.Errorf("default command output missing '初始化完成', got %q", out)
+	}
+}
+
+func TestCLI_Status(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "status")
+	if err != nil {
+		t.Fatalf("status failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "环境状态") {
+		t.Errorf("status output missing '环境状态', got %q", out)
+	}
+}
+
+func TestCLI_Dotfiles(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "dotfiles")
+	if err != nil {
+		t.Fatalf("dotfiles failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Dotfiles") {
+		t.Errorf("dotfiles output missing 'Dotfiles', got %q", out)
+	}
+}
+
+func TestCLI_Install(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "install")
+	if err != nil {
+		t.Fatalf("install failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "安装工具和软件包") {
+		t.Errorf("install output missing expected text, got %q", out)
+	}
+}
+
+func TestCLI_Config(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "config")
+	if err != nil {
+		t.Fatalf("config failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "配置软件和系统偏好设置") {
+		t.Errorf("config output missing expected text, got %q", out)
+	}
+}
+
+func TestCLI_Update(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "update")
+	if err != nil {
+		t.Fatalf("update failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "检测更新") {
+		t.Errorf("update output missing '检测更新', got %q", out)
+	}
+	if !strings.Contains(out, "kickstart update -y") {
+		t.Errorf("update output missing hint for -y flag, got %q", out)
+	}
+}
+
+func TestCLI_Update_WithYes(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "update", "-y")
+	if err != nil {
+		t.Fatalf("update -y failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "执行更新") {
+		t.Errorf("update -y output missing '执行更新', got %q", out)
+	}
+}
+
+func TestCLI_InvalidCommand(t *testing.T) {
+	bin := buildBinary(t)
+	_, err := runKickstart(t, bin, "nonexistent")
+	if err == nil {
+		t.Error("expected error for invalid command")
+	}
+}
+
+func TestCLI_StatusWithConfig(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "status", "-c", "/tmp/custom.yaml")
+	if err != nil {
+		t.Fatalf("status with -c failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "/tmp/custom.yaml") {
+		t.Errorf("status output should show custom config path, got %q", out)
+	}
+}
+
+func TestCLI_SubcommandHelp(t *testing.T) {
+	bin := buildBinary(t)
+	subcommands := []string{"run", "dotfiles", "install", "config", "status", "update", "upgrade"}
+	for _, sub := range subcommands {
+		out, err := runKickstart(t, bin, sub, "--help")
+		if err != nil {
+			t.Errorf("%s --help failed: %v\n%s", sub, err, out)
+		}
+	}
+}
