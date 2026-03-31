@@ -1,7 +1,7 @@
 # kickstart
 
-A CLI tool to bootstrap and configure a new machine with one command.
+一键初始化新电脑环境的命令行工具。
 
-- Manage dotfiles
-- Install common tools and packages
-- Configure software and system preferences
+- 管理 dotfiles
+- 安装常用工具和软件包
+- 配置软件和系统偏好设置
