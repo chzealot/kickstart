@@ -53,5 +53,6 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 因为是私有仓库，安装需要 `GITHUB_TOKEN`：
 ```bash
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" https://raw.githubusercontent.com/chzealot/kickstart/main/install.sh | bash
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3.raw" \
+  https://api.github.com/repos/chzealot/kickstart/contents/install.sh | bash
 ```
