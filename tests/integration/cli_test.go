@@ -127,12 +127,13 @@ func TestCLI_Status(t *testing.T) {
 
 func TestCLI_Dotfiles(t *testing.T) {
 	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "dotfiles")
+	cfg := createTempConfig(t, "# empty config\n")
+	out, err := runKickstart(t, bin, "dotfiles", "-c", cfg)
 	if err != nil {
 		t.Fatalf("dotfiles failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "Dotfiles") {
-		t.Errorf("dotfiles output missing 'Dotfiles', got %q", out)
+	if !strings.Contains(out, "未定义 dotfiles") {
+		t.Errorf("dotfiles output missing expected text, got %q", out)
 	}
 }
 
