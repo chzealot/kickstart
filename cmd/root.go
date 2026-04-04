@@ -45,7 +45,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "配置文件路径（默认 ~/.kickstart.yaml）")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "配置文件或目录路径（默认 ~/.kickstart/）")
 	rootCmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "仅预览变更，不实际执行")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "输出详细日志")
 

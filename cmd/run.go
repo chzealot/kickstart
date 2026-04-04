@@ -25,7 +25,7 @@ var runCmd = &cobra.Command{
 
 		if !cfg.Exists() {
 			ui.Warn("配置文件不存在: %s", cfg.Path)
-			ui.Dim("请创建配置文件，参考 README 中的配置说明")
+			ui.Dim("请创建 ~/.kickstart/config.yaml，参考 README 中的配置说明")
 			return nil
 		}
 

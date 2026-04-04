@@ -37,7 +37,7 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 **版本检测**: `internal/version/` 提供 `AsyncChecker`，在 `rootCmd.PersistentPreRun` 中异步启动，`PersistentPostRun` 中检查结果并提示升级。`Version/Commit/Date` 通过 ldflags 在构建时注入。
 
-**配置管理**: `internal/config/` 解析 `~/.kickstart`（YAML 格式），包含 dotfiles、tools、configs 三个可选段。通过 `-c` flag 可指定其他配置文件路径。
+**配置管理**: `internal/config/` 解析 `~/.kickstart/config.yaml`（YAML 格式），支持 include 子配置文件、按平台（darwin/linux/windows）和主机名（含通配符）定制。通过 `-c` flag 可指定其他路径，兼容旧的单文件格式。
 
 **工具安装**: `internal/installer/` 提供通用的工具安装逻辑，根据配置文件中的 tools 列表，通过系统包管理器（brew/apt-get/dnf 等）安装。
 
