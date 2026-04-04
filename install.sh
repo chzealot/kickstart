@@ -83,4 +83,25 @@ fi
 
 success "安装成功！"
 echo ""
+info "安装路径: ${INSTALL_DIR}/${BINARY}"
+
+# Check if INSTALL_DIR is in PATH
+case ":$PATH:" in
+    *":${INSTALL_DIR}:"*) ;;
+    *)
+        warn "${INSTALL_DIR} 不在 PATH 中，请添加到 shell 配置文件："
+        echo ""
+        echo "  # bash (~/.bashrc)"
+        echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+        echo ""
+        echo "  # zsh (~/.zshrc)"
+        echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+        echo ""
+        echo "  # fish (~/.config/fish/config.fish)"
+        echo "  fish_add_path ${INSTALL_DIR}"
+        echo ""
+        info "添加后运行 source ~/.bashrc（或对应配置文件）使其生效"
+        ;;
+esac
+
 info "运行 ${BINARY} --version 验证安装"

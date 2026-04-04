@@ -61,4 +61,15 @@ if ($UserPath -notlike "*$InstallDir*") {
 }
 
 Success "安装成功！"
+Write-Host ""
+Info "安装路��: $InstallDir\$Binary"
+
+# Check if InstallDir is in current session PATH
+if ($env:PATH -notlike "*$InstallDir*") {
+    Warn "当前终端 PATH 尚未包含 $InstallDir，请重启终端或执行："
+    Write-Host ""
+    Write-Host "  `$env:PATH += `";$InstallDir`""
+    Write-Host ""
+}
+
 Info "运行 kickstart --version 验证安装"
