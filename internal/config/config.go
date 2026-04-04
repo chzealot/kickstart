@@ -284,3 +284,67 @@ func (c *Config) Exists() bool {
 	_, err := os.Stat(c.Path)
 	return err == nil
 }
+
+const defaultConfigTemplate = `# kickstart 配置文件
+# 详细说明请参考: https://github.com/chzealot/kickstart
+
+# 引入子配置文件（可选）
+# include:
+#   - tools.yaml
+#   - repos.yaml
+
+# Dotfiles 管理（bare repo 方式部署到 ~/.git）
+# dotfiles:
+#   repo: git@github.com:yourname/dotfiles.git
+
+# Git 仓库列表（自动 clone 或 pull 更新）
+# repos:
+#   - url: git@github.com:yourname/project.git
+#     path: ~/workspace/project
+
+# 工具安装（macOS 用 brew，Linux 自动检测包管理器）
+# tools:
+#   - git
+#   - curl
+#   - jq
+
+# 软件配置（安装完成后执行的 shell 命令）
+# configs:
+#   - name: zsh 默认 shell
+#     run: chsh -s $(which zsh)
+
+# 平台特定配置
+# darwin:
+#   tools:
+#     - coreutils
+# linux:
+#   tools:
+#     - build-essential
+
+# 主机名特定配置（支持 * 和 ? 通配符）
+# hosts:
+#   my-macbook:
+#     tools:
+#       - ffmpeg
+#   "dev-*":
+#     tools:
+#       - docker
+`
+
+// Init creates the config directory and a default config file with comments.
+func Init(path string) error {
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("获取用户主目录失败: %w", err)
+		}
+		path = filepath.Join(home, defaultConfigDir, defaultConfigFile)
+	}
+
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("创建目录失败: %w", err)
+	}
+
+	return os.WriteFile(path, []byte(defaultConfigTemplate), 0644)
+}

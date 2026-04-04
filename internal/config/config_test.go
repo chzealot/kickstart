@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -474,5 +475,54 @@ func TestConfig_Exists(t *testing.T) {
 	cfg2 := &Config{Path: filepath.Join(t.TempDir(), "nonexistent")}
 	if cfg2.Exists() {
 		t.Fatal("Exists() should return false")
+	}
+}
+
+func TestInit(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfgPath := filepath.Join(tmpDir, "newdir", "config.yaml")
+
+	err := Init(cfgPath)
+	if err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// File should exist
+	if _, err := os.Stat(cfgPath); err != nil {
+		t.Fatalf("config file not created: %v", err)
+	}
+
+	// File should be valid YAML (all commented out → empty config)
+	cfg, err := loadWithEnv(cfgPath, "darwin", "")
+	if err != nil {
+		t.Fatalf("Init created invalid config: %v", err)
+	}
+	if len(cfg.Tools) != 0 {
+		t.Errorf("expected 0 tools in template, got %d", len(cfg.Tools))
+	}
+
+	// Content should contain comments
+	data, _ := os.ReadFile(cfgPath)
+	content := string(data)
+	if !strings.Contains(content, "# tools:") {
+		t.Error("template missing tools comment")
+	}
+	if !strings.Contains(content, "# hosts:") {
+		t.Error("template missing hosts comment")
+	}
+}
+
+func TestInit_DefaultPath(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	err := Init("")
+	if err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	expectedPath := filepath.Join(tmpHome, defaultConfigDir, defaultConfigFile)
+	if _, err := os.Stat(expectedPath); err != nil {
+		t.Fatalf("config file not created at default path: %v", err)
 	}
 }
