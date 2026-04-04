@@ -132,10 +132,16 @@ func CleanOldVersions(keep int) error {
 	})
 
 	// Remove old versions
+	var errs []string
 	for _, v := range versions[keep:] {
-		os.RemoveAll(filepath.Join(baseDir, v.name))
+		if err := os.RemoveAll(filepath.Join(baseDir, v.name)); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", v.name, err))
+		}
 	}
 
+	if len(errs) > 0 {
+		return fmt.Errorf("部分版本清理失败: %s", strings.Join(errs, "; "))
+	}
 	return nil
 }
 

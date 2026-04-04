@@ -70,6 +70,9 @@ func Load(path string) (*Config, error) {
 
 // loadWithEnv is the testable core of Load.
 func loadWithEnv(path, goos, host string) (*Config, error) {
+	// Clear warnings from previous loads
+	duplicateWarnings = nil
+
 	path, err := resolveConfigPath(path)
 	if err != nil {
 		return nil, err
@@ -255,14 +258,68 @@ func mergeSectionPtr(dst, src *Section) *Section {
 }
 
 // mergeSection merges src into dst.
-// Tools, Repos, Configs are appended. Dotfiles is overridden if set.
+// Tools, Repos, Configs are appended (with deduplication). Dotfiles is overridden if set.
 func mergeSection(dst, src *Section) {
 	if src.Dotfiles != nil {
 		dst.Dotfiles = src.Dotfiles
 	}
-	dst.Repos = append(dst.Repos, src.Repos...)
-	dst.Tools = append(dst.Tools, src.Tools...)
+	dst.Repos = mergeRepos(dst.Repos, src.Repos)
+	dst.Tools = mergeTools(dst.Tools, src.Tools)
 	dst.Configs = append(dst.Configs, src.Configs...)
+}
+
+// mergeTools appends new tools, skipping duplicates and recording warnings.
+func mergeTools(dst, src []string) []string {
+	seen := make(map[string]bool, len(dst))
+	for _, t := range dst {
+		seen[t] = true
+	}
+	for _, t := range src {
+		if seen[t] {
+			addDuplicateWarning(fmt.Sprintf("tools 中存在重复项: %s（已自动去重）", t))
+			continue
+		}
+		seen[t] = true
+		dst = append(dst, t)
+	}
+	return dst
+}
+
+// mergeRepos appends new repos, skipping duplicates by path and recording warnings.
+func mergeRepos(dst, src []RepoConfig) []RepoConfig {
+	seen := make(map[string]bool, len(dst))
+	for _, r := range dst {
+		seen[r.Path] = true
+	}
+	for _, r := range src {
+		if seen[r.Path] {
+			addDuplicateWarning(fmt.Sprintf("repos 中存在重复路径: %s（已自动去重）", r.Path))
+			continue
+		}
+		seen[r.Path] = true
+		dst = append(dst, r)
+	}
+	return dst
+}
+
+// DuplicateWarnings stores warnings generated during config merging.
+var duplicateWarnings []string
+
+func addDuplicateWarning(msg string) {
+	// Avoid duplicating the warning itself
+	for _, w := range duplicateWarnings {
+		if w == msg {
+			return
+		}
+	}
+	duplicateWarnings = append(duplicateWarnings, msg)
+}
+
+// PopDuplicateWarnings returns and clears accumulated duplicate warnings.
+func PopDuplicateWarnings() []string {
+	w := duplicateWarnings
+	duplicateWarnings = nil
+	return w
 }
 
 func hostname() string {
@@ -285,35 +342,35 @@ func (c *Config) Exists() bool {
 	return err == nil
 }
 
-const defaultConfigTemplate = `# kickstart 配置文件
-# 详细说明请参考: https://github.com/chzealot/kickstart
+const defaultConfigTemplate = `# kickstart configuration
+# See: https://github.com/chzealot/kickstart
 
-# 引入子配置文件（可选）
+# Include sub-config files (optional)
 # include:
 #   - tools.yaml
 #   - repos.yaml
 
-# Dotfiles 管理（bare repo 方式部署到 ~/.git）
+# Dotfiles management (deployed as bare repo to ~/.git)
 # dotfiles:
 #   repo: git@github.com:yourname/dotfiles.git
 
-# Git 仓库列表（自动 clone 或 pull 更新）
+# Git repositories (auto clone or pull)
 # repos:
 #   - url: git@github.com:yourname/project.git
 #     path: ~/workspace/project
 
-# 工具安装（macOS 用 brew，Linux 自动检测包管理器）
+# Tools to install (brew on macOS, auto-detected package manager on Linux)
 # tools:
 #   - git
 #   - curl
 #   - jq
 
-# 软件配置（安装完成后执行的 shell 命令）
+# Software configuration (shell commands to run after installation)
 # configs:
-#   - name: zsh 默认 shell
+#   - name: set zsh as default shell
 #     run: chsh -s $(which zsh)
 
-# 平台特定配置
+# Platform-specific config
 # darwin:
 #   tools:
 #     - coreutils
@@ -321,7 +378,7 @@ const defaultConfigTemplate = `# kickstart 配置文件
 #   tools:
 #     - build-essential
 
-# 主机名特定配置（支持 * 和 ? 通配符）
+# Host-specific config (supports * and ? wildcards)
 # hosts:
 #   my-macbook:
 #     tools:

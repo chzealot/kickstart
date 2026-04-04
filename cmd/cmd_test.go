@@ -11,7 +11,6 @@ func TestRootCommand_HasSubcommands(t *testing.T) {
 		"repos":    false,
 		"config":   false,
 		"status":   false,
-		"update":   false,
 		"upgrade":  false,
 	}
 
@@ -50,12 +49,3 @@ func TestRootCommand_Flags(t *testing.T) {
 	}
 }
 
-func TestUpdateCommand_YesFlag(t *testing.T) {
-	flag := updateCmd.Flags().Lookup("yes")
-	if flag == nil {
-		t.Fatal("flag --yes not found on update command")
-	}
-	if flag.Shorthand != "y" {
-		t.Errorf("flag --yes shorthand = %q, want 'y'", flag.Shorthand)
-	}
-}

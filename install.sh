@@ -17,12 +17,6 @@ success() { echo -e "${GREEN}✔${NC} $*"; }
 warn()    { echo -e "${YELLOW}⚠${NC} $*"; }
 error()   { echo -e "${RED}✘${NC} $*"; exit 1; }
 
-# Optional: use GITHUB_TOKEN for higher rate limits
-AUTH_HEADER=""
-if [ -n "${GITHUB_TOKEN:-}" ]; then
-    AUTH_HEADER="-H \"Authorization: token $GITHUB_TOKEN\""
-fi
-
 # Detect OS and architecture
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m)"
@@ -71,6 +65,39 @@ if [ -n "${GITHUB_TOKEN:-}" ]; then
 else
     curl -fsSL -o "$TMPDIR/$ARCHIVE_NAME" "$DOWNLOAD_URL"
 fi
+
+# Download checksums
+CHECKSUM_URL="https://github.com/${REPO}/releases/download/${LATEST}/checksums.txt"
+info "下载 checksums.txt..."
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl -fsSL \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -o "$TMPDIR/checksums.txt" \
+        "$CHECKSUM_URL"
+else
+    curl -fsSL -o "$TMPDIR/checksums.txt" "$CHECKSUM_URL"
+fi
+
+# Verify checksum
+info "校验文件完整性..."
+EXPECTED=$(grep "$ARCHIVE_NAME" "$TMPDIR/checksums.txt" | awk '{print $1}')
+if [ -z "$EXPECTED" ]; then
+    error "checksums.txt 中未找到 ${ARCHIVE_NAME} 的校验值"
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    ACTUAL=$(sha256sum "$TMPDIR/$ARCHIVE_NAME" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+    ACTUAL=$(shasum -a 256 "$TMPDIR/$ARCHIVE_NAME" | awk '{print $1}')
+else
+    warn "未找到 sha256sum 或 shasum，跳过校验"
+    ACTUAL="$EXPECTED"
+fi
+
+if [ "$EXPECTED" != "$ACTUAL" ]; then
+    error "checksum 校验失败\n  期望: ${EXPECTED}\n  实际: ${ACTUAL}"
+fi
+success "checksum 校验通过"
 
 # Extract
 info "解压..."

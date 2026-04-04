@@ -53,6 +53,8 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 在 GitHub 上创建 Release → 触发 `.github/workflows/release.yml` → 先跑测试 → 6 平台矩阵并行构建 → 上传二进制到 Release。
 
+**Release Note 规范**: Release Note 必须使用中英双语编写，中文在前、英文在后，用 `---` 分隔。
+
 ## 安装方式
 
 ```bash

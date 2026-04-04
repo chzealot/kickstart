@@ -4,9 +4,7 @@ import (
 	"fmt"
 
 	"github.com/chzealot/kickstart/internal/config"
-	"github.com/chzealot/kickstart/internal/installer"
 	"github.com/chzealot/kickstart/internal/repo"
-	"github.com/chzealot/kickstart/internal/runner"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +25,11 @@ var runCmd = &cobra.Command{
 		if !cfg.Exists() {
 			promptInitConfig(cfg)
 			return nil
+		}
+
+		// Show duplicate warnings from config merging
+		for _, w := range config.PopDuplicateWarnings() {
+			ui.Warn("  %s", w)
 		}
 
 		// Dotfiles
@@ -52,26 +55,8 @@ var runCmd = &cobra.Command{
 		ui.Section("安装工具")
 		if len(cfg.Tools) == 0 {
 			ui.Dim("  未配置")
-		} else {
-			tools := installer.FromNames(cfg.Tools)
-			for _, tool := range tools {
-				if tool.Check() {
-					ui.Success("  %s 已安装", tool.Name)
-					continue
-				}
-				if dryRun {
-					ui.Step("  将安装 %s（dry-run 模式，跳过）", tool.Name)
-					continue
-				}
-				sp := ui.StartSpinner(fmt.Sprintf("  正在安装 %s...", tool.Name))
-				err := tool.Install(false)
-				sp.Stop()
-				if err != nil {
-					ui.Error("  安装 %s 失败: %v", tool.Name, err)
-				} else {
-					ui.Success("  %s 安装成功", tool.Name)
-				}
-			}
+		} else if ensurePackageManager(dryRun) {
+			installTools(cfg.Tools, dryRun)
 		}
 
 		// Repos
@@ -79,20 +64,7 @@ var runCmd = &cobra.Command{
 		if len(cfg.Repos) == 0 {
 			ui.Dim("  未配置")
 		} else {
-			for _, r := range cfg.Repos {
-				if dryRun {
-					ui.Step("  将同步 %s → %s（dry-run 模式，跳过）", r.URL, r.Path)
-					continue
-				}
-				sp := ui.StartSpinner(fmt.Sprintf("  同步 %s ...", r.URL))
-				err := repo.Sync(r.URL, r.Path)
-				sp.Stop()
-				if err != nil {
-					ui.Error("  %s → %s 失败: %v", r.URL, r.Path, err)
-				} else {
-					ui.Success("  %s → %s", r.URL, r.Path)
-				}
-			}
+			syncRepos(cfg.Repos, dryRun)
 		}
 
 		// Configs
@@ -100,19 +72,7 @@ var runCmd = &cobra.Command{
 		if len(cfg.Configs) == 0 {
 			ui.Dim("  未配置")
 		} else {
-			for _, task := range cfg.Configs {
-				if dryRun {
-					ui.Step("  将执行: %s（dry-run 模式，跳过）", task.Name)
-					continue
-				}
-				ui.Step("  执行: %s", task.Name)
-				err := runner.RunShell(task.Run)
-				if err != nil {
-					ui.Error("  %s 失败: %v", task.Name, err)
-				} else {
-					ui.Success("  %s", task.Name)
-				}
-			}
+			executeConfigs(cfg.Configs, dryRun)
 		}
 
 		fmt.Println()

@@ -45,6 +45,24 @@ $TmpFile = Join-Path $TmpDir $ArchiveName
 try {
     Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $TmpFile
 
+    # Download checksums
+    $ChecksumUrl = "https://github.com/$Repo/releases/download/$Tag/checksums.txt"
+    $ChecksumFile = Join-Path $TmpDir "checksums.txt"
+    Info "下载 checksums.txt..."
+    Invoke-WebRequest -Uri $ChecksumUrl -Headers $Headers -OutFile $ChecksumFile
+
+    # Verify checksum
+    Info "校验文件完整性..."
+    $Expected = (Get-Content $ChecksumFile | Where-Object { $_ -match $ArchiveName } | ForEach-Object { ($_ -split '\s+')[0] })
+    if (-not $Expected) {
+        Error "checksums.txt 中未找到 ${ArchiveName} 的校验值"
+    }
+    $Actual = (Get-FileHash -Path $TmpFile -Algorithm SHA256).Hash.ToLower()
+    if ($Expected -ne $Actual) {
+        Error "checksum 校验失败`n  期望: ${Expected}`n  实际: ${Actual}"
+    }
+    Success "checksum 校验通过"
+
     # Extract
     Info "解压..."
     Expand-Archive -Path $TmpFile -DestinationPath $TmpDir -Force

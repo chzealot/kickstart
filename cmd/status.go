@@ -7,6 +7,7 @@ import (
 
 	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/installer"
+	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/chzealot/kickstart/internal/version"
 	"github.com/spf13/cobra"
@@ -63,7 +64,7 @@ var statusCmd = &cobra.Command{
 			ui.Dim("  未配置")
 		} else {
 			for _, r := range cfg.Repos {
-				path := expandHomePath(r.Path)
+				path := repo.ExpandHome(r.Path)
 				if _, err := os.Stat(path); err == nil {
 					ui.Success("  %s → %s ✔", r.URL, r.Path)
 				} else {
@@ -84,15 +85,6 @@ var statusCmd = &cobra.Command{
 
 		return nil
 	},
-}
-
-func expandHomePath(path string) string {
-	if len(path) >= 2 && path[:2] == "~/" {
-		if home, err := os.UserHomeDir(); err == nil {
-			return home + path[1:]
-		}
-	}
-	return path
 }
 
 func init() {

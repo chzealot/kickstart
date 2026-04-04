@@ -19,6 +19,27 @@ func TestNormalizeVersion(t *testing.T) {
 	}
 }
 
+func TestIsNewer(t *testing.T) {
+	tests := []struct {
+		latest  string
+		current string
+		want    bool
+	}{
+		{"v1.1.0", "v1.0.0", true},
+		{"v1.0.0", "v1.0.0", false},
+		{"v1.0.0", "v1.1.0", false},
+		{"1.1.0", "1.0.0", true},
+		{"v2.0.0", "v1.9.9", true},
+		{"v0.2.0", "v0.1.0", true},
+		{"v0.1.0", "v0.2.0", false},
+	}
+	for _, tt := range tests {
+		if got := IsNewer(tt.latest, tt.current); got != tt.want {
+			t.Errorf("IsNewer(%q, %q) = %v, want %v", tt.latest, tt.current, got, tt.want)
+		}
+	}
+}
+
 func TestCheckResult_DevVersion(t *testing.T) {
 	// Version defaults to "dev", checker should return nil (skip check)
 	// Note: we don't modify the global to avoid data races with the goroutine

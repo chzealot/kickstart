@@ -58,7 +58,7 @@ func TestAsyncChecker_WithUpdate(t *testing.T) {
 	result := &CheckResult{
 		Latest:    "v2.0.0",
 		Current:   "v1.0.0",
-		HasUpdate: normalizeVersion("v2.0.0") != normalizeVersion("v1.0.0"),
+		HasUpdate: IsNewer("v2.0.0", "v1.0.0"),
 	}
 	if !result.HasUpdate {
 		t.Error("expected HasUpdate to be true")
@@ -69,7 +69,7 @@ func TestAsyncChecker_NoUpdate(t *testing.T) {
 	result := &CheckResult{
 		Latest:    "v1.0.0",
 		Current:   "v1.0.0",
-		HasUpdate: normalizeVersion("v1.0.0") != normalizeVersion("v1.0.0"),
+		HasUpdate: IsNewer("v1.0.0", "v1.0.0"),
 	}
 	if result.HasUpdate {
 		t.Error("expected HasUpdate to be false")
@@ -80,7 +80,7 @@ func TestAsyncChecker_VersionWithAndWithoutPrefix(t *testing.T) {
 	result := &CheckResult{
 		Latest:    "v1.0.0",
 		Current:   "1.0.0",
-		HasUpdate: normalizeVersion("v1.0.0") != normalizeVersion("1.0.0"),
+		HasUpdate: IsNewer("v1.0.0", "1.0.0"),
 	}
 	if result.HasUpdate {
 		t.Error("expected HasUpdate to be false for v1.0.0 vs 1.0.0")

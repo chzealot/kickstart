@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/chzealot/kickstart/internal/config"
-	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/spf13/cobra"
 )
 
 var reposCmd = &cobra.Command{
 	Use:   "repos",
-	Short: "克隆或更新 Git 仓库",
+	Short: "同步 Git 仓库（clone 或 pull）",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load(cfgFile)
 		if err != nil {
@@ -29,33 +28,13 @@ var reposCmd = &cobra.Command{
 			return nil
 		}
 
-		ui.Title("克隆或更新 Git 仓库")
+		ui.Title("Git 仓库")
 		fmt.Println()
 
-		hasError := false
-		for _, r := range cfg.Repos {
-			if dryRun {
-				ui.Step("将同步 %s → %s（dry-run 模式，跳过）", r.URL, r.Path)
-				continue
-			}
-
-			sp := ui.StartSpinner(fmt.Sprintf("同步 %s ...", r.URL))
-			err := repo.Sync(r.URL, r.Path)
-			sp.Stop()
-
-			if err != nil {
-				ui.Error("%s → %s 失败: %v", r.URL, r.Path, err)
-				hasError = true
-			} else {
-				ui.Success("%s → %s", r.URL, r.Path)
-			}
-		}
+		syncRepos(cfg.Repos, dryRun)
 
 		fmt.Println()
-		if hasError {
-			return fmt.Errorf("部分仓库同步失败")
-		}
-		ui.Success("所有仓库已同步")
+		ui.Success("仓库同步完成")
 		return nil
 	},
 }

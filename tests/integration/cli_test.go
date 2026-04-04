@@ -53,7 +53,6 @@ func TestCLI_Help(t *testing.T) {
 		"repos",
 		"config",
 		"status",
-		"update",
 		"upgrade",
 		"--config",
 		"--dry-run",
@@ -171,31 +170,6 @@ func TestCLI_Config(t *testing.T) {
 	}
 }
 
-func TestCLI_Update(t *testing.T) {
-	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "update")
-	if err != nil {
-		t.Fatalf("update failed: %v\n%s", err, out)
-	}
-	if !strings.Contains(out, "检测更新") {
-		t.Errorf("update output missing '检测更新', got %q", out)
-	}
-	if !strings.Contains(out, "kickstart update -y") {
-		t.Errorf("update output missing hint for -y flag, got %q", out)
-	}
-}
-
-func TestCLI_Update_WithYes(t *testing.T) {
-	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "update", "-y")
-	if err != nil {
-		t.Fatalf("update -y failed: %v\n%s", err, out)
-	}
-	if !strings.Contains(out, "执行更新") {
-		t.Errorf("update -y output missing '执行更新', got %q", out)
-	}
-}
-
 func TestCLI_InvalidCommand(t *testing.T) {
 	bin := buildBinary(t)
 	_, err := runKickstart(t, bin, "nonexistent")
@@ -221,7 +195,7 @@ func TestCLI_StatusWithConfig(t *testing.T) {
 
 func TestCLI_SubcommandHelp(t *testing.T) {
 	bin := buildBinary(t)
-	subcommands := []string{"run", "dotfiles", "install", "repos", "config", "status", "update", "upgrade"}
+	subcommands := []string{"run", "dotfiles", "install", "repos", "config", "status", "upgrade"}
 	for _, sub := range subcommands {
 		out, err := runKickstart(t, bin, sub, "--help")
 		if err != nil {
