@@ -53,32 +53,42 @@ fi
 
 info "最新版本: ${LATEST}"
 
-# Download binary
-ASSET="${BINARY}_${OS}_${ARCH}"
-DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST}/${ASSET}"
+# Download archive
+ARCHIVE_NAME="kickstart-${OS}-${ARCH}.tar.gz"
+DIR_NAME="kickstart-${OS}-${ARCH}"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${LATEST}/${ARCHIVE_NAME}"
 
-info "下载 ${ASSET}..."
+info "下载 ${ARCHIVE_NAME}..."
 
-TMPFILE=$(mktemp)
-trap 'rm -f "$TMPFILE"' EXIT
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
 
 if [ -n "${GITHUB_TOKEN:-}" ]; then
     curl -fsSL \
         -H "Authorization: token $GITHUB_TOKEN" \
-        -o "$TMPFILE" \
+        -o "$TMPDIR/$ARCHIVE_NAME" \
         "$DOWNLOAD_URL"
 else
-    curl -fsSL -o "$TMPFILE" "$DOWNLOAD_URL"
+    curl -fsSL -o "$TMPDIR/$ARCHIVE_NAME" "$DOWNLOAD_URL"
 fi
 
-chmod +x "$TMPFILE"
+# Extract
+info "解压..."
+tar xzf "$TMPDIR/$ARCHIVE_NAME" -C "$TMPDIR"
+
+BINARY_PATH="$TMPDIR/$DIR_NAME/$BINARY"
+if [ ! -f "$BINARY_PATH" ]; then
+    error "解压后未找到二进制文件: $BINARY_PATH"
+fi
+
+chmod +x "$BINARY_PATH"
 
 # Install
 info "安装到 ${INSTALL_DIR}/${BINARY}..."
 if [ -w "$INSTALL_DIR" ]; then
-    mv "$TMPFILE" "${INSTALL_DIR}/${BINARY}"
+    mv "$BINARY_PATH" "${INSTALL_DIR}/${BINARY}"
 else
-    sudo mv "$TMPFILE" "${INSTALL_DIR}/${BINARY}"
+    sudo mv "$BINARY_PATH" "${INSTALL_DIR}/${BINARY}"
 fi
 
 success "安装成功！"

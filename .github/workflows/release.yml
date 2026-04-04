@@ -48,7 +48,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Build
+      - name: Build and package
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
@@ -58,25 +58,47 @@ jobs:
           DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           LDFLAGS="-s -w -X github.com/chzealot/kickstart/internal/version.Version=${VERSION} -X github.com/chzealot/kickstart/internal/version.Commit=${COMMIT} -X github.com/chzealot/kickstart/internal/version.Date=${DATE}"
 
-          OUTPUT="kickstart_${{ matrix.goos }}_${{ matrix.goarch }}"
+          BINARY="kickstart"
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            OUTPUT="${OUTPUT}.exe"
+            BINARY="kickstart.exe"
           fi
 
-          go build -ldflags "$LDFLAGS" -o "${OUTPUT}" .
-          echo "ARTIFACT=${OUTPUT}" >> $GITHUB_ENV
+          DIR_NAME="kickstart-${{ matrix.goos }}-${{ matrix.goarch }}"
+          mkdir -p "${DIR_NAME}"
+
+          go build -ldflags "$LDFLAGS" -o "${DIR_NAME}/${BINARY}" .
+
+          # Add docs to the archive
+          cp README.md "${DIR_NAME}/"
+          cp LICENSE "${DIR_NAME}/"
+
+          # Generate release notes file
+          gh release view "${VERSION}" --json body -q '.body' > "${DIR_NAME}/RELEASE-NOTES.md" || echo "See https://github.com/chzealot/kickstart/releases/tag/${VERSION}" > "${DIR_NAME}/RELEASE-NOTES.md"
+
+          # Package: tar.gz for mac/linux, zip for windows
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            ARCHIVE="${DIR_NAME}.zip"
+            zip -r "${ARCHIVE}" "${DIR_NAME}"
+          else
+            ARCHIVE="${DIR_NAME}.tar.gz"
+            tar czf "${ARCHIVE}" "${DIR_NAME}"
+          fi
+
+          echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ github.event.release.tag_name }} ${{ env.ARTIFACT }} --clobber
+          gh release upload ${{ github.event.release.tag_name }} ${{ env.ARCHIVE }} --clobber
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.ARTIFACT }}
-          path: ${{ env.ARTIFACT }}
+          name: ${{ env.ARCHIVE }}
+          path: ${{ env.ARCHIVE }}
 
   checksum:
     needs: build
@@ -94,7 +116,7 @@ jobs:
         run: |
           cd artifacts
           ls -la
-          sha256sum kickstart_* > checksums.txt
+          sha256sum kickstart-* > checksums.txt
           cat checksums.txt
 
       - name: Upload checksums to release

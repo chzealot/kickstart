@@ -32,26 +32,37 @@ if (-not $Tag) {
 
 Info "最新版本: $Tag"
 
-# Find asset
-$AssetName = "kickstart_windows_${Arch}.exe"
-$Asset = $Release.assets | Where-Object { $_.name -eq $AssetName }
+# Download archive
+$ArchiveName = "kickstart-windows-${Arch}.zip"
+$DirName = "kickstart-windows-${Arch}"
+$DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$ArchiveName"
 
-if (-not $Asset) {
-    Error "未找到对应平台的构建产物: $AssetName"
+Info "下载 ${ArchiveName}..."
+$TmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("kickstart-install-" + [System.Guid]::NewGuid().ToString("N").Substring(0, 8))
+New-Item -ItemType Directory -Path $TmpDir -Force | Out-Null
+$TmpFile = Join-Path $TmpDir $ArchiveName
+
+try {
+    Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $TmpFile
+
+    # Extract
+    Info "解压..."
+    Expand-Archive -Path $TmpFile -DestinationPath $TmpDir -Force
+
+    $BinaryPath = Join-Path $TmpDir $DirName $Binary
+    if (-not (Test-Path $BinaryPath)) {
+        Error "解压后未找到二进制文件: $BinaryPath"
+    }
+
+    # Install
+    if (-not (Test-Path $InstallDir)) {
+        New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    }
+
+    Move-Item -Force $BinaryPath "$InstallDir\$Binary"
+} finally {
+    Remove-Item -Recurse -Force $TmpDir -ErrorAction SilentlyContinue
 }
-
-# Download
-Info "下载 ${AssetName}..."
-$TmpFile = [System.IO.Path]::GetTempFileName()
-$DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$AssetName"
-Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $TmpFile
-
-# Install
-if (-not (Test-Path $InstallDir)) {
-    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-}
-
-Move-Item -Force $TmpFile "$InstallDir\$Binary"
 
 # Add to PATH if needed
 $UserPath = [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -62,7 +73,7 @@ if ($UserPath -notlike "*$InstallDir*") {
 
 Success "安装成功！"
 Write-Host ""
-Info "安装路��: $InstallDir\$Binary"
+Info "安装路径: $InstallDir\$Binary"
 
 # Check if InstallDir is in current session PATH
 if ($env:PATH -notlike "*$InstallDir*") {

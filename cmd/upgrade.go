@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -53,62 +54,104 @@ var upgradeCmd = &cobra.Command{
 	},
 }
 
-func doUpgrade(tag string) error {
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
-	asset := fmt.Sprintf("kickstart_%s_%s", goos, goarch)
-	if goos == "windows" {
-		asset += ".exe"
+// archiveName returns the archive filename for the current platform.
+// e.g. kickstart-darwin-arm64.tar.gz or kickstart-windows-amd64.zip
+func archiveName() string {
+	name := fmt.Sprintf("kickstart-%s-%s", runtime.GOOS, runtime.GOARCH)
+	if runtime.GOOS == "windows" {
+		return name + ".zip"
 	}
+	return name + ".tar.gz"
+}
+
+// binaryName returns the binary filename inside the archive.
+func binaryName() string {
+	if runtime.GOOS == "windows" {
+		return "kickstart.exe"
+	}
+	return "kickstart"
+}
+
+// dirName returns the directory name inside the archive.
+func dirName() string {
+	return fmt.Sprintf("kickstart-%s-%s", runtime.GOOS, runtime.GOARCH)
+}
+
+func doUpgrade(tag string) error {
+	archive := archiveName()
+	binary := binaryName()
 
 	execPath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("获取可执行文件路径失败: %w", err)
 	}
 
-	// 1. Check local cache
-	if cachedPath, ok := cache.HasValidBinary(tag, asset); ok {
-		ui.Info("使用本地缓存: %s", cachedPath)
-		if err := installBinary(cachedPath, execPath); err != nil {
-			return err
+	// 1. Check local cache for extracted binary
+	if cachedPath, ok := cache.HasValidBinary(tag, archive); ok {
+		ui.Info("使用本地缓存")
+		binaryPath := filepath.Join(filepath.Dir(cachedPath), dirName(), binary)
+		if _, err := os.Stat(binaryPath); err == nil {
+			return installBinary(binaryPath, execPath)
 		}
-		cleanOldCache()
-		return nil
+		// Fallback: extract again
 	}
 
-	// 2. Download checksums.txt and binary
-	if err := downloadAndCache(tag, asset); err != nil {
+	// 2. Download checksums.txt and archive
+	if err := downloadAndCache(tag, archive); err != nil {
 		return err
 	}
 
 	// 3. Verify checksum
-	if err := cache.VerifyChecksum(tag, asset); err != nil {
+	if err := cache.VerifyChecksum(tag, archive); err != nil {
 		return fmt.Errorf("checksum 校验失败: %w", err)
 	}
 
-	// 4. Install from cache
+	// 4. Extract binary from archive
 	cacheDir, err := cache.Dir(tag)
 	if err != nil {
 		return err
 	}
-	cachedBinary := cacheDir + "/" + asset
-	if err := installBinary(cachedBinary, execPath); err != nil {
+	archivePath := filepath.Join(cacheDir, archive)
+	if err := extractArchive(archivePath, cacheDir); err != nil {
+		return fmt.Errorf("解压失败: %w", err)
+	}
+
+	// 5. Install binary
+	binaryPath := filepath.Join(cacheDir, dirName(), binary)
+	if err := installBinary(binaryPath, execPath); err != nil {
 		return err
 	}
 
-	// 5. Clean old versions
+	// 6. Clean old versions
 	cleanOldCache()
 	return nil
 }
 
-func downloadAndCache(tag, asset string) error {
-	if _, err := exec.LookPath("gh"); err == nil {
-		return downloadWithGH(tag, asset)
+func extractArchive(archivePath, destDir string) error {
+	if strings.HasSuffix(archivePath, ".zip") {
+		cmd := exec.Command("unzip", "-o", archivePath, "-d", destDir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("%s: %s", err, strings.TrimSpace(string(out)))
+		}
+		return nil
 	}
-	return downloadWithCurl(tag, asset)
+
+	// tar.gz
+	cmd := exec.Command("tar", "xzf", archivePath, "-C", destDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
-func downloadWithGH(tag, asset string) error {
+func downloadAndCache(tag, archive string) error {
+	if _, err := exec.LookPath("gh"); err == nil {
+		return downloadWithGH(tag, archive)
+	}
+	return downloadWithCurl(tag, archive)
+}
+
+func downloadWithGH(tag, archive string) error {
 	cacheDir, err := cache.Dir(tag)
 	if err != nil {
 		return err
@@ -129,22 +172,22 @@ func downloadWithGH(tag, asset string) error {
 		return fmt.Errorf("下载 checksums.txt 失败: %w", err)
 	}
 
-	// Download binary
+	// Download archive
 	cmd = exec.Command("gh", "release", "download", tag,
 		"--repo", "chzealot/kickstart",
-		"-p", asset,
+		"-p", archive,
 		"-D", cacheDir,
 		"--clobber")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("下载二进制文件失败: %w", err)
+		return fmt.Errorf("下载压缩包失败: %w", err)
 	}
 
 	return nil
 }
 
-func downloadWithCurl(tag, asset string) error {
+func downloadWithCurl(tag, archive string) error {
 	cacheDir, err := cache.Dir(tag)
 	if err != nil {
 		return err
@@ -156,13 +199,13 @@ func downloadWithCurl(tag, asset string) error {
 	baseURL := fmt.Sprintf("https://github.com/chzealot/kickstart/releases/download/%s", tag)
 
 	// Download checksums.txt
-	if err := curlDownload(baseURL+"/checksums.txt", cacheDir+"/checksums.txt"); err != nil {
+	if err := curlDownload(baseURL+"/checksums.txt", filepath.Join(cacheDir, "checksums.txt")); err != nil {
 		return fmt.Errorf("下载 checksums.txt 失败: %w", err)
 	}
 
-	// Download binary
-	if err := curlDownload(baseURL+"/"+asset, cacheDir+"/"+asset); err != nil {
-		return fmt.Errorf("下载二进制文件失败: %w", err)
+	// Download archive
+	if err := curlDownload(baseURL+"/"+archive, filepath.Join(cacheDir, archive)); err != nil {
+		return fmt.Errorf("下载压缩包失败: %w", err)
 	}
 
 	return nil
