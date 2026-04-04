@@ -88,17 +88,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: Generate checksums
         run: |
           cd artifacts
-          # Each artifact is in its own subdirectory, flatten them
-          find . -type f -not -name '*.json' | while read f; do
-            mv "$f" ./ 2>/dev/null || true
-          done
-          # Remove empty subdirectories
-          find . -mindepth 1 -type d -exec rmdir {} + 2>/dev/null || true
-          # Generate checksums for all binary files
+          ls -la
           sha256sum kickstart_* > checksums.txt
           cat checksums.txt
 
