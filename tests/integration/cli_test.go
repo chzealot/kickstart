@@ -165,7 +165,8 @@ func TestCLI_Config(t *testing.T) {
 	if err != nil {
 		t.Fatalf("config failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "配置软件和系统偏好设置") {
+	// Without config file, should prompt for init (same as other subcommands)
+	if !strings.Contains(out, "配置文件不存在") && !strings.Contains(out, "配置软件和系统偏好设置") {
 		t.Errorf("config output missing expected text, got %q", out)
 	}
 }
