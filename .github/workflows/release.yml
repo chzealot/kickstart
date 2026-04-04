@@ -52,6 +52,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${{ github.event.release.tag_name }}
           COMMIT=${GITHUB_SHA::8}
@@ -85,8 +86,6 @@ jobs:
           fi
 
           echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release asset
         env:
