@@ -9,9 +9,10 @@ function Success($msg) { Write-Host "√ $msg" -ForegroundColor Green }
 function Warn($msg)    { Write-Host "! $msg" -ForegroundColor Yellow }
 function Error($msg)   { Write-Host "x $msg" -ForegroundColor Red; exit 1 }
 
-# Check GITHUB_TOKEN
-if (-not $env:GITHUB_TOKEN) {
-    Error "请设置 GITHUB_TOKEN 环境变量（需要 repo 权限的 Personal Access Token）"
+# Optional: use GITHUB_TOKEN for higher rate limits
+$Headers = @{}
+if ($env:GITHUB_TOKEN) {
+    $Headers["Authorization"] = "token $env:GITHUB_TOKEN"
 }
 
 # Detect architecture
@@ -22,7 +23,6 @@ Info "检测到系统: windows/${Arch}"
 
 # Get latest release
 Info "获取最新版本..."
-$Headers = @{ Authorization = "token $env:GITHUB_TOKEN" }
 $Release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers $Headers
 $Tag = $Release.tag_name
 
@@ -43,11 +43,8 @@ if (-not $Asset) {
 # Download
 Info "下载 ${AssetName}..."
 $TmpFile = [System.IO.Path]::GetTempFileName()
-$DownloadHeaders = @{
-    Authorization = "token $env:GITHUB_TOKEN"
-    Accept = "application/octet-stream"
-}
-Invoke-WebRequest -Uri $Asset.url -Headers $DownloadHeaders -OutFile $TmpFile
+$DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$AssetName"
+Invoke-WebRequest -Uri $DownloadUrl -Headers $Headers -OutFile $TmpFile
 
 # Install
 if (-not (Test-Path $InstallDir)) {

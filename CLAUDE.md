@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-kickstart 是一个用 Go 编写的命令行工具，用于一键初始化新电脑环境（dotfiles、工具安装、软件配置）。仓库为私有仓库 (github.com/chzealot/kickstart)。用户界面语言为中文。
+kickstart 是一个用 Go 编写的开源命令行工具，用于一键初始化新电脑环境（dotfiles、工具安装、软件配置）。仓库地址: github.com/chzealot/kickstart，MIT 协议。用户界面语言为中文。
 
 ## 常用命令
 
@@ -51,8 +51,6 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 ## 安装方式
 
-因为是私有仓库，安装需要 `GITHUB_TOKEN`：
 ```bash
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3.raw" \
-  https://api.github.com/repos/chzealot/kickstart/contents/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chzealot/kickstart/main/install.sh | bash
 ```

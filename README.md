@@ -8,17 +8,18 @@
 
 ## 安装
 
-> 需要先设置 `GITHUB_TOKEN` 环境变量（需有 repo 权限的 [Personal Access Token](https://github.com/settings/tokens)）。
-
 **Mac / Linux：**
 
 ```bash
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3.raw" \
-  https://api.github.com/repos/chzealot/kickstart/contents/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chzealot/kickstart/main/install.sh | bash
 ```
 
 **Windows：**
 
 ```powershell
-irm -Headers @{Authorization="token $env:GITHUB_TOKEN"} https://raw.githubusercontent.com/chzealot/kickstart/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/chzealot/kickstart/main/install.ps1 | iex
 ```
+
+## 许可证
+
+[MIT](LICENSE)

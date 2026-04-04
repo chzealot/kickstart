@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // CheckResult holds the result of a version check.
@@ -36,6 +37,16 @@ func (c *AsyncChecker) Result() *CheckResult {
 	case r := <-c.result:
 		return r
 	default:
+		return nil
+	}
+}
+
+// WaitResult waits up to timeout for the check result.
+func (c *AsyncChecker) WaitResult(timeout time.Duration) *CheckResult {
+	select {
+	case r := <-c.result:
+		return r
+	case <-time.After(timeout):
 		return nil
 	}
 }

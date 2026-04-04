@@ -71,3 +71,39 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ github.event.release.tag_name }} ${{ env.ARTIFACT }} --clobber
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT }}
+          path: ${{ env.ARTIFACT }}
+
+  checksum:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          # Each artifact is in its own subdirectory, flatten them
+          find . -type f -not -name '*.json' | while read f; do
+            mv "$f" ./ 2>/dev/null || true
+          done
+          # Remove empty subdirectories
+          find . -mindepth 1 -type d -exec rmdir {} + 2>/dev/null || true
+          # Generate checksums for all binary files
+          sha256sum kickstart_* > checksums.txt
+          cat checksums.txt
+
+      - name: Upload checksums to release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} artifacts/checksums.txt --clobber
