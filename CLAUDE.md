@@ -37,7 +37,11 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 **版本检测**: `internal/version/` 提供 `AsyncChecker`，在 `rootCmd.PersistentPreRun` 中异步启动，`PersistentPostRun` 中检查结果并提示升级。`Version/Commit/Date` 通过 ldflags 在构建时注入。
 
-**自更新**: `cmd/upgrade.go` 优先使用 `gh` CLI 下载 release，降级为 `curl` + `GITHUB_TOKEN`。
+**配置管理**: `internal/config/` 解析 `~/.kickstart`（YAML 格式），包含 dotfiles、tools、configs 三个可选段。通过 `-c` flag 可指定其他配置文件路径。
+
+**工具安装**: `internal/installer/` 提供通用的工具安装逻辑，根据配置文件中的 tools 列表，通过系统包管理器（brew/apt-get/dnf 等）安装。
+
+**自更新**: `cmd/upgrade.go` 优先使用 `gh` CLI 下载 release，降级为 `curl` + `GITHUB_TOKEN`。下载文件缓存到 `~/.cache/kickstart/{version}/`，支持 checksum 校验和自动清理历史版本。
 
 ## 测试结构
 

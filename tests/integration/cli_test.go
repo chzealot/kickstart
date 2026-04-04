@@ -1,7 +1,9 @@
 package integration
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -23,6 +25,17 @@ func runKickstart(t *testing.T, binary string, args ...string) (string, error) {
 	cmd := exec.Command(binary, args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+// createTempConfig creates a temporary config file and returns the path.
+func createTempConfig(t *testing.T, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, ".kickstart")
+	if err := os.WriteFile(cfgPath, []byte(content), 0644); err != nil {
+		t.Fatalf("failed to write temp config: %v", err)
+	}
+	return cfgPath
 }
 
 func TestCLI_Help(t *testing.T) {
@@ -66,7 +79,8 @@ func TestCLI_Version(t *testing.T) {
 
 func TestCLI_Run(t *testing.T) {
 	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "run")
+	cfg := createTempConfig(t, "tools:\n  - git\n")
+	out, err := runKickstart(t, bin, "run", "-c", cfg)
 	if err != nil {
 		t.Fatalf("run failed: %v\n%s", err, out)
 	}
@@ -75,10 +89,22 @@ func TestCLI_Run(t *testing.T) {
 	}
 }
 
+func TestCLI_Run_NoConfig(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "run", "-c", "/tmp/nonexistent_kickstart_config")
+	if err != nil {
+		t.Fatalf("run failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "配置文件不存在") {
+		t.Errorf("run output missing '配置文件不存在', got %q", out)
+	}
+}
+
 func TestCLI_DefaultCommand(t *testing.T) {
 	bin := buildBinary(t)
+	cfg := createTempConfig(t, "tools:\n  - git\n")
 	// Running without subcommand should behave like "run"
-	out, err := runKickstart(t, bin)
+	out, err := runKickstart(t, bin, "-c", cfg)
 	if err != nil {
 		t.Fatalf("default command failed: %v\n%s", err, out)
 	}
@@ -111,12 +137,24 @@ func TestCLI_Dotfiles(t *testing.T) {
 
 func TestCLI_Install(t *testing.T) {
 	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "install")
+	cfg := createTempConfig(t, "tools:\n  - git\n")
+	out, err := runKickstart(t, bin, "install", "-c", cfg)
 	if err != nil {
 		t.Fatalf("install failed: %v\n%s", err, out)
 	}
 	if !strings.Contains(out, "安装工具和软件包") {
 		t.Errorf("install output missing expected text, got %q", out)
+	}
+}
+
+func TestCLI_Install_NoConfig(t *testing.T) {
+	bin := buildBinary(t)
+	out, err := runKickstart(t, bin, "install", "-c", "/tmp/nonexistent_kickstart_config")
+	if err != nil {
+		t.Fatalf("install failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "配置文件不存在") {
+		t.Errorf("install output missing '配置文件不存在', got %q", out)
 	}
 }
 
@@ -166,12 +204,16 @@ func TestCLI_InvalidCommand(t *testing.T) {
 
 func TestCLI_StatusWithConfig(t *testing.T) {
 	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "status", "-c", "/tmp/custom.yaml")
+	cfg := createTempConfig(t, "tools:\n  - git\n  - curl\n")
+	out, err := runKickstart(t, bin, "status", "-c", cfg)
 	if err != nil {
 		t.Fatalf("status with -c failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "/tmp/custom.yaml") {
+	if !strings.Contains(out, cfg) {
 		t.Errorf("status output should show custom config path, got %q", out)
+	}
+	if !strings.Contains(out, "git") {
+		t.Errorf("status output should show configured tools, got %q", out)
 	}
 }
 

@@ -3,23 +3,40 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/installer"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-// tools lists all tools that kickstart can install.
-var tools = []installer.Tool{
-	installer.Rsync(),
-}
-
 var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "安装工具和软件包",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		cfg, err := config.Load(cfgFile)
+		if err != nil {
+			ui.Error("加载配置失败: %v", err)
+			return nil
+		}
+
+		if !cfg.Exists() {
+			ui.Warn("配置文件不存在: %s", cfg.Path)
+			ui.Dim("请创建配置文件，示例：")
+			ui.Dim("  tools:")
+			ui.Dim("    - rsync")
+			ui.Dim("    - jq")
+			return nil
+		}
+
+		if len(cfg.Tools) == 0 {
+			ui.Info("配置文件中未定义 tools")
+			return nil
+		}
+
 		ui.Title("安装工具和软件包")
 		fmt.Println()
 
+		tools := installer.FromNames(cfg.Tools)
 		hasError := false
 		for _, tool := range tools {
 			if tool.Check() {

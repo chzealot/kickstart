@@ -2,25 +2,6 @@ package cmd
 
 import "testing"
 
-func TestConfigPath_Default(t *testing.T) {
-	cfgFile = ""
-	got := configPath()
-	want := "~/.kickstart.yaml（默认）"
-	if got != want {
-		t.Errorf("configPath() = %q, want %q", got, want)
-	}
-}
-
-func TestConfigPath_Custom(t *testing.T) {
-	cfgFile = "/tmp/test.yaml"
-	defer func() { cfgFile = "" }()
-
-	got := configPath()
-	if got != "/tmp/test.yaml" {
-		t.Errorf("configPath() = %q, want '/tmp/test.yaml'", got)
-	}
-}
-
 func TestRootCommand_HasSubcommands(t *testing.T) {
 	commands := rootCmd.Commands()
 	expected := map[string]bool{
