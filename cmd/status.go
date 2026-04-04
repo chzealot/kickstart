@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"os"
+
 	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/installer"
 	"github.com/chzealot/kickstart/internal/ui"
@@ -55,6 +57,21 @@ var statusCmd = &cobra.Command{
 			}
 		}
 
+		// Repos
+		ui.Section("Git 仓库")
+		if len(cfg.Repos) == 0 {
+			ui.Dim("  未配置")
+		} else {
+			for _, r := range cfg.Repos {
+				path := expandHomePath(r.Path)
+				if _, err := os.Stat(path); err == nil {
+					ui.Success("  %s → %s ✔", r.URL, r.Path)
+				} else {
+					ui.Warn("  %s → %s ✘ 未克隆", r.URL, r.Path)
+				}
+			}
+		}
+
 		// Configs
 		ui.Section("软件配置")
 		if len(cfg.Configs) == 0 {
@@ -67,6 +84,15 @@ var statusCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func expandHomePath(path string) string {
+	if len(path) >= 2 && path[:2] == "~/" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return home + path[1:]
+		}
+	}
+	return path
 }
 
 func init() {

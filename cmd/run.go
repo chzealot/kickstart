@@ -5,6 +5,7 @@ import (
 
 	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/installer"
+	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -59,6 +60,27 @@ var runCmd = &cobra.Command{
 					ui.Error("  安装 %s 失败: %v", tool.Name, err)
 				} else {
 					ui.Success("  %s 安装成功", tool.Name)
+				}
+			}
+		}
+
+		// Repos
+		ui.Section("Git 仓库")
+		if len(cfg.Repos) == 0 {
+			ui.Dim("  未配置")
+		} else {
+			for _, r := range cfg.Repos {
+				if dryRun {
+					ui.Step("  将同步 %s → %s（dry-run 模式，跳过）", r.URL, r.Path)
+					continue
+				}
+				sp := ui.StartSpinner(fmt.Sprintf("  同步 %s ...", r.URL))
+				err := repo.Sync(r.URL, r.Path)
+				sp.Stop()
+				if err != nil {
+					ui.Error("  %s → %s 失败: %v", r.URL, r.Path, err)
+				} else {
+					ui.Success("  %s → %s", r.URL, r.Path)
 				}
 			}
 		}

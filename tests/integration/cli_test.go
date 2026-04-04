@@ -50,6 +50,7 @@ func TestCLI_Help(t *testing.T) {
 		"run",
 		"dotfiles",
 		"install",
+		"repos",
 		"config",
 		"status",
 		"update",
@@ -219,7 +220,7 @@ func TestCLI_StatusWithConfig(t *testing.T) {
 
 func TestCLI_SubcommandHelp(t *testing.T) {
 	bin := buildBinary(t)
-	subcommands := []string{"run", "dotfiles", "install", "config", "status", "update", "upgrade"}
+	subcommands := []string{"run", "dotfiles", "install", "repos", "config", "status", "update", "upgrade"}
 	for _, sub := range subcommands {
 		out, err := runKickstart(t, bin, sub, "--help")
 		if err != nil {

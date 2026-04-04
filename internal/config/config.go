@@ -4,23 +4,48 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
 
 const defaultConfigName = ".kickstart"
 
-// Config holds the parsed configuration.
-type Config struct {
-	Path     string          `yaml:"-"`
+// Section holds configuration for a scope (global, platform, or host).
+type Section struct {
 	Dotfiles *DotfilesConfig `yaml:"dotfiles,omitempty"`
+	Repos    []RepoConfig    `yaml:"repos,omitempty"`
 	Tools    []string        `yaml:"tools,omitempty"`
 	Configs  []ConfigTask    `yaml:"configs,omitempty"`
+}
+
+// rawConfig is the full YAML structure before merging.
+type rawConfig struct {
+	Section `yaml:",inline"`
+	Darwin  *Section            `yaml:"darwin,omitempty"`
+	Linux   *Section            `yaml:"linux,omitempty"`
+	Windows *Section            `yaml:"windows,omitempty"`
+	Hosts   map[string]*Section `yaml:"hosts,omitempty"`
+}
+
+// Config holds the merged configuration ready for use.
+type Config struct {
+	Path     string
+	Dotfiles *DotfilesConfig
+	Repos    []RepoConfig
+	Tools    []string
+	Configs  []ConfigTask
 }
 
 // DotfilesConfig holds dotfiles repository settings.
 type DotfilesConfig struct {
 	Repo string `yaml:"repo"`
+}
+
+// RepoConfig holds a git repository to clone/update.
+type RepoConfig struct {
+	URL  string `yaml:"url"`
+	Path string `yaml:"path"`
 }
 
 // ConfigTask holds a named shell command to run.
@@ -29,10 +54,16 @@ type ConfigTask struct {
 	Run  string `yaml:"run"`
 }
 
-// Load reads and parses the config file.
+// Load reads, parses, and merges the config file.
+// Merge order: global → platform (darwin/linux/windows) → matching hosts.
 // If path is empty, it defaults to ~/.kickstart.
 // Returns an empty config (not an error) if the file does not exist.
 func Load(path string) (*Config, error) {
+	return loadWithEnv(path, runtime.GOOS, hostname())
+}
+
+// loadWithEnv is the testable core of Load.
+func loadWithEnv(path, goos, host string) (*Config, error) {
 	if path == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -51,12 +82,70 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
-	if err := yaml.Unmarshal(data, cfg); err != nil {
+	var raw rawConfig
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("解析配置文件失败: %w", err)
 	}
 
-	cfg.Path = path
+	// Start with global section
+	merged := &Section{
+		Dotfiles: raw.Section.Dotfiles,
+		Repos:    append([]RepoConfig{}, raw.Section.Repos...),
+		Tools:    append([]string{}, raw.Section.Tools...),
+		Configs:  append([]ConfigTask{}, raw.Section.Configs...),
+	}
+
+	// Merge platform section
+	var platformSection *Section
+	switch goos {
+	case "darwin":
+		platformSection = raw.Darwin
+	case "linux":
+		platformSection = raw.Linux
+	case "windows":
+		platformSection = raw.Windows
+	}
+	if platformSection != nil {
+		mergeSection(merged, platformSection)
+	}
+
+	// Merge matching host sections
+	if host != "" && len(raw.Hosts) > 0 {
+		for pattern, section := range raw.Hosts {
+			if section == nil {
+				continue
+			}
+			matched, err := filepath.Match(pattern, host)
+			if err != nil {
+				continue // invalid pattern, skip
+			}
+			if matched {
+				mergeSection(merged, section)
+			}
+		}
+	}
+
+	cfg.Dotfiles = merged.Dotfiles
+	cfg.Repos = merged.Repos
+	cfg.Tools = merged.Tools
+	cfg.Configs = merged.Configs
 	return cfg, nil
+}
+
+// mergeSection merges src into dst.
+// Tools, Repos, Configs are appended. Dotfiles is overridden if set.
+func mergeSection(dst, src *Section) {
+	if src.Dotfiles != nil {
+		dst.Dotfiles = src.Dotfiles
+	}
+	dst.Repos = append(dst.Repos, src.Repos...)
+	dst.Tools = append(dst.Tools, src.Tools...)
+	dst.Configs = append(dst.Configs, src.Configs...)
+}
+
+func hostname() string {
+	name, _ := os.Hostname()
+	return name
 }
 
 // DefaultPath returns the default config file path.
