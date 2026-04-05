@@ -9,8 +9,9 @@ func TestRootCommand_HasSubcommands(t *testing.T) {
 		"dotfiles": false,
 		"install":  false,
 		"repos":    false,
-		"config":   false,
+		"scripts":  false,
 		"status":   false,
+		"go":       false,
 		"upgrade":  false,
 	}
 

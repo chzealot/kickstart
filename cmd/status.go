@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/chzealot/kickstart/internal/config"
+	"github.com/chzealot/kickstart/internal/goinstall"
 	"github.com/chzealot/kickstart/internal/installer"
 	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/ui"
@@ -43,6 +44,19 @@ var statusCmd = &cobra.Command{
 			ui.Dim("  未配置")
 		}
 
+		// Go
+		ui.Section("Go 语言")
+		if cfg.Go != "" {
+			local := goinstall.LocalVersion()
+			if local != "" {
+				ui.Success("  %s ✔", local)
+			} else {
+				ui.Warn("  未安装")
+			}
+		} else {
+			ui.Dim("  未配置")
+		}
+
 		// Tools
 		ui.Section("工具安装")
 		if len(cfg.Tools) == 0 {
@@ -73,12 +87,12 @@ var statusCmd = &cobra.Command{
 			}
 		}
 
-		// Configs
-		ui.Section("软件配置")
-		if len(cfg.Configs) == 0 {
+		// Scripts
+		ui.Section("配置脚本")
+		if len(cfg.Scripts) == 0 {
 			ui.Dim("  未配置")
 		} else {
-			for _, task := range cfg.Configs {
+			for _, task := range cfg.Scripts {
 				ui.Info("  %s", task.Name)
 			}
 		}

@@ -51,6 +51,14 @@ var runCmd = &cobra.Command{
 			ui.Dim("  未配置")
 		}
 
+		// Go
+		ui.Section("Go 语言")
+		if cfg.Go == "" {
+			ui.Dim("  未配置")
+		} else {
+			installGo(cfg.Go, dryRun)
+		}
+
 		// Tools
 		ui.Section("安装工具")
 		if len(cfg.Tools) == 0 {
@@ -67,12 +75,12 @@ var runCmd = &cobra.Command{
 			syncRepos(cfg.Repos, dryRun)
 		}
 
-		// Configs
-		ui.Section("配置软件")
-		if len(cfg.Configs) == 0 {
+		// Scripts
+		ui.Section("执行脚本")
+		if len(cfg.Scripts) == 0 {
 			ui.Dim("  未配置")
 		} else {
-			executeConfigs(cfg.Configs, dryRun)
+			executeScripts(cfg.Scripts, dryRun)
 		}
 
 		fmt.Println()

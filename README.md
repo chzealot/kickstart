@@ -5,9 +5,10 @@
 A CLI tool for bootstrapping a new machine in one command.
 
 - 管理 dotfiles / Manage dotfiles
+- 安装/更新 Go 语言 / Install/update Go language
 - 克隆和更新 Git 仓库 / Clone and sync Git repositories
 - 安装常用工具和软件包 / Install tools and packages
-- 配置软件和系统偏好设置 / Configure software and system preferences
+- 执行配置脚本 / Run configuration scripts
 
 ## 安装 / Installation
 
@@ -57,6 +58,8 @@ include:
 
 dotfiles:
   repo: git@github.com:yourname/dotfiles.git
+
+go: latest
 ```
 
 ### 子配置文件 / Sub-config Files
@@ -126,8 +129,8 @@ hosts:
 
 Configs are merged in order: **include → general → platform → hostname**.
 
-- `tools`、`repos`、`configs`: 追加合并 / appended
-- `dotfiles`: 后者覆盖前者 / later values override earlier ones
+- `tools`、`repos`、`scripts`: 追加合并 / appended
+- `dotfiles`、`go`: 后者覆盖前者 / later values override earlier ones
 
 ### 字段说明 / Field Reference
 
@@ -135,11 +138,12 @@ Configs are merged in order: **include → general → platform → hostname**.
 |---|---|
 | `include` | 子配置文件列表 / Sub-config file list (relative or absolute paths) |
 | `dotfiles.repo` | Dotfiles 仓库地址，以 bare repo 方式部署到 `~/.git` / Dotfiles repo URL, deployed as bare repo to `~/.git` |
+| `go` | Go 语言安装（`latest` 安装最新稳定版）/ Go installation (`latest` installs latest stable from go.dev) |
 | `repos[].url` | Git 仓库地址 / Git repository URL |
 | `repos[].path` | 本地目标路径（支持 `~`），不存在时 clone，已存在时 pull / Local path (`~` supported), cloned if missing, pulled if exists |
 | `tools[]` | 工具名称，通过系统包管理器安装 / Tool name, installed via system package manager (brew on macOS, auto-detected on Linux) |
-| `configs[].name` | 配置任务显示名称 / Config task display name |
-| `configs[].run` | 要执行的 shell 命令 / Shell command to execute |
+| `scripts[].name` | 脚本任务显示名称 / Script task display name |
+| `scripts[].run` | 要执行的 shell 命令 / Shell command to execute |
 
 ### 兼容性 / Compatibility
 
@@ -153,11 +157,17 @@ Configs are merged in order: **include → general → platform → hostname**.
 # 执行全部初始化流程 / Run all initialization steps
 kickstart
 
+# 安装/更新 Go 语言 / Install/update Go
+kickstart go
+
 # 仅安装工具 / Install tools only
 kickstart install
 
 # 仅同步 Git 仓库 / Sync Git repositories only
 kickstart repos
+
+# 执行配置脚本 / Run configuration scripts
+kickstart scripts
 
 # 查看环境状态 / View environment status
 kickstart status

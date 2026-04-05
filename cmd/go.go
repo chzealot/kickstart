@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var scriptsCmd = &cobra.Command{
-	Use:   "scripts",
-	Short: "执行配置脚本",
+var goCmd = &cobra.Command{
+	Use:   "go",
+	Short: "安装或更新 Go 语言到最新稳定版",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load(cfgFile)
 		if err != nil {
@@ -23,22 +23,21 @@ var scriptsCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(cfg.Scripts) == 0 {
-			ui.Info("配置文件中未定义 scripts")
+		if cfg.Go == "" {
+			ui.Info("配置文件中未定义 go")
+			ui.Dim("添加 \"go: latest\" 到配置文件以启用")
 			return nil
 		}
 
-		ui.Title("执行配置脚本")
+		ui.Title("Go 语言")
 		fmt.Println()
 
-		executeScripts(cfg.Scripts, dryRun)
+		installGo(cfg.Go, dryRun)
 
-		fmt.Println()
-		ui.Success("脚本执行完成")
 		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(scriptsCmd)
+	rootCmd.AddCommand(goCmd)
 }

@@ -49,9 +49,10 @@ func TestCLI_Help(t *testing.T) {
 		"一键初始化新电脑环境",
 		"run",
 		"dotfiles",
+		"go",
 		"install",
 		"repos",
-		"config",
+		"scripts",
 		"status",
 		"upgrade",
 		"--config",
@@ -159,15 +160,15 @@ func TestCLI_Install_NoConfig(t *testing.T) {
 	}
 }
 
-func TestCLI_Config(t *testing.T) {
+func TestCLI_Scripts(t *testing.T) {
 	bin := buildBinary(t)
-	out, err := runKickstart(t, bin, "config")
+	out, err := runKickstart(t, bin, "scripts")
 	if err != nil {
-		t.Fatalf("config failed: %v\n%s", err, out)
+		t.Fatalf("scripts failed: %v\n%s", err, out)
 	}
 	// Without config file, should prompt for init (same as other subcommands)
-	if !strings.Contains(out, "配置文件不存在") && !strings.Contains(out, "配置软件和系统偏好设置") {
-		t.Errorf("config output missing expected text, got %q", out)
+	if !strings.Contains(out, "配置文件不存在") && !strings.Contains(out, "执行配置脚本") {
+		t.Errorf("scripts output missing expected text, got %q", out)
 	}
 }
 
@@ -196,7 +197,7 @@ func TestCLI_StatusWithConfig(t *testing.T) {
 
 func TestCLI_SubcommandHelp(t *testing.T) {
 	bin := buildBinary(t)
-	subcommands := []string{"run", "dotfiles", "install", "repos", "config", "status", "upgrade"}
+	subcommands := []string{"run", "dotfiles", "go", "install", "repos", "scripts", "status", "upgrade"}
 	for _, sub := range subcommands {
 		out, err := runKickstart(t, bin, sub, "--help")
 		if err != nil {

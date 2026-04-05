@@ -17,9 +17,10 @@ const (
 // Section holds configuration for a scope (global, platform, or host).
 type Section struct {
 	Dotfiles *DotfilesConfig `yaml:"dotfiles,omitempty"`
+	Go       string          `yaml:"go,omitempty"`
 	Repos    []RepoConfig    `yaml:"repos,omitempty"`
 	Tools    []string        `yaml:"tools,omitempty"`
-	Configs  []ConfigTask    `yaml:"configs,omitempty"`
+	Scripts  []ScriptTask    `yaml:"scripts,omitempty"`
 }
 
 // rawConfig is the full YAML structure before merging.
@@ -36,9 +37,10 @@ type rawConfig struct {
 type Config struct {
 	Path     string
 	Dotfiles *DotfilesConfig
+	Go       string
 	Repos    []RepoConfig
 	Tools    []string
-	Configs  []ConfigTask
+	Scripts  []ScriptTask
 }
 
 // DotfilesConfig holds dotfiles repository settings.
@@ -52,8 +54,8 @@ type RepoConfig struct {
 	Path string `yaml:"path"`
 }
 
-// ConfigTask holds a named shell command to run.
-type ConfigTask struct {
+// ScriptTask holds a named shell command to run.
+type ScriptTask struct {
 	Name string `yaml:"name"`
 	Run  string `yaml:"run"`
 }
@@ -96,9 +98,10 @@ func loadWithEnv(path, goos, host string) (*Config, error) {
 	// Start with global section
 	merged := &Section{
 		Dotfiles: raw.Section.Dotfiles,
+		Go:       raw.Section.Go,
 		Repos:    append([]RepoConfig{}, raw.Section.Repos...),
 		Tools:    append([]string{}, raw.Section.Tools...),
-		Configs:  append([]ConfigTask{}, raw.Section.Configs...),
+		Scripts:  append([]ScriptTask{}, raw.Section.Scripts...),
 	}
 
 	// Merge platform section
@@ -132,9 +135,10 @@ func loadWithEnv(path, goos, host string) (*Config, error) {
 	}
 
 	cfg.Dotfiles = merged.Dotfiles
+	cfg.Go = merged.Go
 	cfg.Repos = merged.Repos
 	cfg.Tools = merged.Tools
-	cfg.Configs = merged.Configs
+	cfg.Scripts = merged.Scripts
 	return cfg, nil
 }
 
@@ -258,14 +262,17 @@ func mergeSectionPtr(dst, src *Section) *Section {
 }
 
 // mergeSection merges src into dst.
-// Tools, Repos, Configs are appended (with deduplication). Dotfiles is overridden if set.
+// Tools, Repos, Scripts are appended (with deduplication). Dotfiles and Go are overridden if set.
 func mergeSection(dst, src *Section) {
 	if src.Dotfiles != nil {
 		dst.Dotfiles = src.Dotfiles
 	}
+	if src.Go != "" {
+		dst.Go = src.Go
+	}
 	dst.Repos = mergeRepos(dst.Repos, src.Repos)
 	dst.Tools = mergeTools(dst.Tools, src.Tools)
-	dst.Configs = append(dst.Configs, src.Configs...)
+	dst.Scripts = append(dst.Scripts, src.Scripts...)
 }
 
 // mergeTools appends new tools, skipping duplicates and recording warnings.
@@ -359,14 +366,17 @@ const defaultConfigTemplate = `# kickstart configuration
 #   - url: git@github.com:yourname/project.git
 #     path: ~/workspace/project
 
+# Go installation (download from go.dev, fallback to golang.google.cn)
+# go: latest
+
 # Tools to install (brew on macOS, auto-detected package manager on Linux)
 # tools:
 #   - git
 #   - curl
 #   - jq
 
-# Software configuration (shell commands to run after installation)
-# configs:
+# Scripts to run after installation (shell commands)
+# scripts:
 #   - name: set zsh as default shell
 #     run: chsh -s $(which zsh)
 

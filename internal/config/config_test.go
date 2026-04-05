@@ -34,7 +34,7 @@ tools:
   - git
   - jq
 
-configs:
+scripts:
   - name: zsh 默认 shell
     run: chsh -s $(which zsh)
 `,
@@ -54,8 +54,8 @@ configs:
 	if len(cfg.Tools) != 3 {
 		t.Fatalf("expected 3 tools, got %d: %v", len(cfg.Tools), cfg.Tools)
 	}
-	if len(cfg.Configs) != 1 {
-		t.Fatalf("expected 1 config task, got %d", len(cfg.Configs))
+	if len(cfg.Scripts) != 1 {
+		t.Fatalf("expected 1 config task, got %d", len(cfg.Scripts))
 	}
 }
 

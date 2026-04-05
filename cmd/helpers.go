@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/chzealot/kickstart/internal/config"
+	"github.com/chzealot/kickstart/internal/goinstall"
 	"github.com/chzealot/kickstart/internal/installer"
 	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/runner"
@@ -61,6 +62,51 @@ func ensureWindowsPM(dryRun bool) bool {
 	return false
 }
 
+// installGo handles Go installation/update based on config.
+func installGo(goConfig string, dryRun bool) {
+	if dryRun {
+		ui.Step("  将安装/更新 Go 到最新版（dry-run 模式，跳过）")
+		return
+	}
+
+	sp := ui.StartSpinner("  获取 Go 最新版本...")
+	version, files, err := goinstall.FetchLatestVersion()
+	sp.Stop()
+	if err != nil {
+		ui.Error("  %v", err)
+		return
+	}
+
+	local := goinstall.LocalVersion()
+	if !goinstall.NeedsInstall(version, local) {
+		ui.Success("  Go 已是最新版 (%s)", version)
+		return
+	}
+
+	archive, err := goinstall.FindArchive(files)
+	if err != nil {
+		ui.Error("  %v", err)
+		return
+	}
+
+	if local == "" {
+		ui.Step("  安装 Go %s (%s)...", version, archive.Filename)
+	} else {
+		ui.Step("  更新 Go %s → %s (%s)...", local, version, archive.Filename)
+	}
+
+	sp = ui.StartSpinner(fmt.Sprintf("  下载 %s...", archive.Filename))
+	err = goinstall.Install(archive)
+	sp.Stop()
+	if err != nil {
+		ui.Error("  Go 安装失败: %v", err)
+		return
+	}
+
+	ui.Success("  Go %s 安装成功", version)
+	ui.Dim("  路径: /usr/local/go/bin/go")
+}
+
 // installTools installs tools from the given list using system package managers.
 func installTools(tools []string, dryRun bool) {
 	for _, tool := range installer.FromNames(tools) {
@@ -101,9 +147,9 @@ func syncRepos(repos []config.RepoConfig, dryRun bool) {
 	}
 }
 
-// executeConfigs runs the given list of shell configuration tasks.
-func executeConfigs(configs []config.ConfigTask, dryRun bool) {
-	for _, task := range configs {
+// executeScripts runs the given list of shell script tasks.
+func executeScripts(scripts []config.ScriptTask, dryRun bool) {
+	for _, task := range scripts {
 		if dryRun {
 			ui.Step("  将执行: %s（dry-run 模式，跳过）", task.Name)
 			continue
