@@ -7,6 +7,7 @@ import (
 	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/goinstall"
 	"github.com/chzealot/kickstart/internal/installer"
+	"github.com/chzealot/kickstart/internal/pyinstall"
 	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/runner"
 	"github.com/chzealot/kickstart/internal/ui"
@@ -105,6 +106,53 @@ func installGo(goConfig string, dryRun bool) {
 
 	ui.Success("  Go %s 安装成功", version)
 	ui.Dim("  路径: /usr/local/go/bin/go")
+}
+
+// installPython handles Python installation/update based on config.
+func installPython(pythonConfig string, dryRun bool) {
+	if dryRun {
+		ui.Step("  将安装/更新 Python 到最新版（dry-run 模式，跳过）")
+		return
+	}
+
+	sp := ui.StartSpinner("  获取 Python 最新版本...")
+	latest, err := pyinstall.FetchLatestVersion()
+	sp.Stop()
+	if err != nil {
+		ui.Error("  %v", err)
+		return
+	}
+
+	local := pyinstall.LocalVersion()
+	if !pyinstall.NeedsInstall(latest, local) {
+		ui.Success("  Python 已是最新版 (%s)", latest)
+		// Still ensure symlink exists
+		if err := pyinstall.EnsurePythonSymlink(); err != nil {
+			ui.Warn("  %v", err)
+		}
+		return
+	}
+
+	if local == "" {
+		ui.Step("  安装 Python %s...", latest)
+	} else {
+		ui.Step("  更新 Python %s → %s...", local, latest)
+	}
+
+	sp = ui.StartSpinner(fmt.Sprintf("  下载并安装 Python %s...", latest))
+	err = pyinstall.Install(latest)
+	sp.Stop()
+	if err != nil {
+		ui.Error("  Python 安装失败: %v", err)
+		return
+	}
+
+	// Create python → python3 symlink
+	if err := pyinstall.EnsurePythonSymlink(); err != nil {
+		ui.Warn("  创建 python 符号链接失败: %v", err)
+	}
+
+	ui.Success("  Python %s 安装成功", latest)
 }
 
 // installTools installs tools from the given list using system package managers.

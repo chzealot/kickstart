@@ -6,6 +6,7 @@ A CLI tool for bootstrapping a new machine in one command.
 
 - 管理 dotfiles / Manage dotfiles
 - 安装/更新 Go 语言 / Install/update Go language
+- 安装/更新 Python / Install/update Python
 - 克隆和更新 Git 仓库 / Clone and sync Git repositories
 - 安装常用工具和软件包 / Install tools and packages
 - 执行配置脚本 / Run configuration scripts
@@ -60,6 +61,7 @@ dotfiles:
   repo: git@github.com:yourname/dotfiles.git
 
 go: latest
+python: latest
 ```
 
 ### 子配置文件 / Sub-config Files
@@ -130,7 +132,7 @@ hosts:
 Configs are merged in order: **include → general → platform → hostname**.
 
 - `tools`、`repos`、`scripts`: 追加合并 / appended
-- `dotfiles`、`go`: 后者覆盖前者 / later values override earlier ones
+- `dotfiles`、`go`、`python`: 后者覆盖前者 / later values override earlier ones
 
 ### 字段说明 / Field Reference
 
@@ -139,6 +141,7 @@ Configs are merged in order: **include → general → platform → hostname**.
 | `include` | 子配置文件列表 / Sub-config file list (relative or absolute paths) |
 | `dotfiles.repo` | Dotfiles 仓库地址，以 bare repo 方式部署到 `~/.git` / Dotfiles repo URL, deployed as bare repo to `~/.git` |
 | `go` | Go 语言安装（`latest` 安装最新稳定版）/ Go installation (`latest` installs latest stable from go.dev) |
+| `python` | Python 安装（`latest`，macOS 从 python.org 下载，Linux 用包管理器）/ Python installation (`latest`, macOS from python.org, Linux via package manager) |
 | `repos[].url` | Git 仓库地址 / Git repository URL |
 | `repos[].path` | 本地目标路径（支持 `~`），不存在时 clone，已存在时 pull / Local path (`~` supported), cloned if missing, pulled if exists |
 | `tools[]` | 工具名称，通过系统包管理器安装 / Tool name, installed via system package manager (brew on macOS, auto-detected on Linux) |
@@ -159,6 +162,9 @@ kickstart
 
 # 安装/更新 Go 语言 / Install/update Go
 kickstart go
+
+# 安装/更新 Python / Install/update Python
+kickstart python
 
 # 仅安装工具 / Install tools only
 kickstart install

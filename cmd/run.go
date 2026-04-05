@@ -59,6 +59,14 @@ var runCmd = &cobra.Command{
 			installGo(cfg.Go, dryRun)
 		}
 
+		// Python
+		ui.Section("Python")
+		if cfg.Python == "" {
+			ui.Dim("  未配置")
+		} else {
+			installPython(cfg.Python, dryRun)
+		}
+
 		// Tools
 		ui.Section("安装工具")
 		if len(cfg.Tools) == 0 {

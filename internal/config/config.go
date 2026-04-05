@@ -18,6 +18,7 @@ const (
 type Section struct {
 	Dotfiles *DotfilesConfig `yaml:"dotfiles,omitempty"`
 	Go       string          `yaml:"go,omitempty"`
+	Python   string          `yaml:"python,omitempty"`
 	Repos    []RepoConfig    `yaml:"repos,omitempty"`
 	Tools    []string        `yaml:"tools,omitempty"`
 	Scripts  []ScriptTask    `yaml:"scripts,omitempty"`
@@ -38,6 +39,7 @@ type Config struct {
 	Path     string
 	Dotfiles *DotfilesConfig
 	Go       string
+	Python   string
 	Repos    []RepoConfig
 	Tools    []string
 	Scripts  []ScriptTask
@@ -99,6 +101,7 @@ func loadWithEnv(path, goos, host string) (*Config, error) {
 	merged := &Section{
 		Dotfiles: raw.Section.Dotfiles,
 		Go:       raw.Section.Go,
+		Python:   raw.Section.Python,
 		Repos:    append([]RepoConfig{}, raw.Section.Repos...),
 		Tools:    append([]string{}, raw.Section.Tools...),
 		Scripts:  append([]ScriptTask{}, raw.Section.Scripts...),
@@ -136,6 +139,7 @@ func loadWithEnv(path, goos, host string) (*Config, error) {
 
 	cfg.Dotfiles = merged.Dotfiles
 	cfg.Go = merged.Go
+	cfg.Python = merged.Python
 	cfg.Repos = merged.Repos
 	cfg.Tools = merged.Tools
 	cfg.Scripts = merged.Scripts
@@ -270,6 +274,9 @@ func mergeSection(dst, src *Section) {
 	if src.Go != "" {
 		dst.Go = src.Go
 	}
+	if src.Python != "" {
+		dst.Python = src.Python
+	}
 	dst.Repos = mergeRepos(dst.Repos, src.Repos)
 	dst.Tools = mergeTools(dst.Tools, src.Tools)
 	dst.Scripts = append(dst.Scripts, src.Scripts...)
@@ -368,6 +375,9 @@ const defaultConfigTemplate = `# kickstart configuration
 
 # Go installation (download from go.dev, fallback to golang.google.cn)
 # go: latest
+
+# Python installation (macOS: python.org .pkg, Linux: package manager)
+# python: latest
 
 # Tools to install (brew on macOS, auto-detected package manager on Linux)
 # tools:

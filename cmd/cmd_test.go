@@ -12,6 +12,7 @@ func TestRootCommand_HasSubcommands(t *testing.T) {
 		"scripts":  false,
 		"status":   false,
 		"go":       false,
+		"python":   false,
 		"upgrade":  false,
 	}
 

@@ -8,6 +8,7 @@ import (
 	"github.com/chzealot/kickstart/internal/config"
 	"github.com/chzealot/kickstart/internal/goinstall"
 	"github.com/chzealot/kickstart/internal/installer"
+	"github.com/chzealot/kickstart/internal/pyinstall"
 	"github.com/chzealot/kickstart/internal/repo"
 	"github.com/chzealot/kickstart/internal/ui"
 	"github.com/chzealot/kickstart/internal/version"
@@ -50,6 +51,22 @@ var statusCmd = &cobra.Command{
 			local := goinstall.LocalVersion()
 			if local != "" {
 				ui.Success("  %s ✔", local)
+			} else {
+				ui.Warn("  未安装")
+			}
+		} else {
+			ui.Dim("  未配置")
+		}
+
+		// Python
+		ui.Section("Python")
+		if cfg.Python != "" {
+			local := pyinstall.LocalVersion()
+			if local != "" {
+				ui.Success("  Python %s ✔", local)
+				if sym := pyinstall.SymlinkStatus(); sym != "" {
+					ui.Dim("  python → %s", sym)
+				}
 			} else {
 				ui.Warn("  未安装")
 			}

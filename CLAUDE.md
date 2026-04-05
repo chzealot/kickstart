@@ -41,6 +41,8 @@ go test -v -race -run TestCLI_Help ./tests/integration/...
 
 **Go 安装**: `internal/goinstall/` 提供 Go 语言的安装和更新逻辑。从 `go.dev/dl` 获取最新版本（降级到 `golang.google.cn`），下载 tar.gz 并安装到 `/usr/local/go`，包含 SHA256 校验。通过配置文件 `go: latest` 启用。
 
+**Python 安装**: `internal/pyinstall/` 提供 Python 的安装和更新逻辑。macOS 从 python.org 下载 .pkg 安装器，Linux 使用系统包管理器。安装后自动创建 `python` → `python3` 符号链接。通过配置文件 `python: latest` 启用。
+
 **工具安装**: `internal/installer/` 提供通用的工具安装逻辑，根据配置文件中的 tools 列表，通过系统包管理器（brew/apt-get/dnf 等）安装。
 
 **自更新**: `cmd/upgrade.go` 优先使用 `gh` CLI 下载 release，降级为 `curl` + `GITHUB_TOKEN`。下载文件缓存到 `~/.cache/kickstart/{version}/`，支持 checksum 校验和自动清理历史版本。
